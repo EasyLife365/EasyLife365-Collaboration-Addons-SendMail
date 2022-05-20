@@ -4,5 +4,8 @@
 @{
     # For latest supported version, go to 'https://www.powershellgallery.com/packages/Az'.
     # To use the Az module in your function app, please uncomment the line below.
-    # 'Az' = '7.*'
+    'Az' = '7.*'
+    'Microsoft.Graph.Authentication' = '1.*'
+    'Microsoft.Graph.Users.Actions' = '1.*'
+    'Microsoft.Graph.Groups' = '1.*'
 }

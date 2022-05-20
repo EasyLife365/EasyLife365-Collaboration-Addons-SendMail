@@ -6,7 +6,11 @@ param($Request, $TriggerMetadata)
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 
-$request.body | Push-OutputBinding $outputQueueItem
+$Request
+$Request.group
+$Request.body.group
+
+Push-OutputBinding -Name queueItem -Value $Request
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value (

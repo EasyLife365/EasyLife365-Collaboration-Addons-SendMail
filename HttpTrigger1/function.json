@@ -17,7 +17,7 @@
     },
     {
       "type": "queue",
-      "name": "outputQueueItem",
+      "name": "queueItem",
       "queueName": "queue1",
       "connection": "AzureWebJobsStorage",
       "direction": "out"
