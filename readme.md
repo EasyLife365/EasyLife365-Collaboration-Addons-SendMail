@@ -74,31 +74,33 @@ $graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-J
     az rest --method POST --uri $uri --header $header --body $body.Replace('"',"'")
 }
 
+# update deploy package
+$deployPath = Get-ChildItem | `
+Where-Object {$_.Name -notmatch "deploypkg"} | `
+Compress-Archive -DestinationPath deploypkg.zip -Force -PassThru
+
 # deploy the zipped package
 az functionapp deployment source config-zip `
 --name $functionAppName `
 --resource-group $resourceGroupName `
---src /Users/tto/git/deploypkg.zip
-
-# update deploy package
-Get-ChildItem | Compress-Archive -DestinationPath ../deploypkg.zip -Force
+--src $deployPath.FullName
 ```
 
 # test the function app
 
-before setting the webhook url in easylife, make sure to ping the function app at least once. The first execution is slow as requirements defined in `requirements.psd1` are installed.
+before setting the webhook url in easylife, make sure to ping the function app at least once. The first execution is slow as requirements defined in `requirements.psd1` are installed. Get URI from function app `HTTPTrigger1` and enter a valid group `id`: 
 
 ```powershell
-$uri = 'https://ttofnapp01.azurewebsites.net/api/HttpTrigger1?code=LCjfrlX9GjwGFWMIwY4xWwFPO4NvpMA7DAhpszsRgRhoAzFuhO9A_A=='
+$uri = 'https://<functionAppUrl>.azurewebsites.net/api/HttpTrigger1?code=<functionAuthCode>=='
 
 $item = @{
     eventType = "groupcreated"
     user = @{
-        userPrincipalName = "tom@uclab.eu"
+        userPrincipalName = "testuser@example.com"
     }
     group = @{
-        displayName = "testing123"
-        id = "bed129c8-2ecb-4cb7-b812-c754270ec7d8"
+        displayName = "Test Team Name"
+        id = "bed129c8-2ecb-4cb7-b812-c754270ec7d8" # should exist in tenant for valid test
     }
 } 
 
