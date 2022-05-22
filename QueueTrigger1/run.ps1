@@ -23,16 +23,16 @@ Thanks for using EasyLife!
 "@
 
 $mailParams = @{
-	Message = @{
-		Subject = "New team: $($QueueItem.Body.group.displayName)"
-		Body = @{
-			ContentType = "Text"
-			Content = $mailText
-		}
-		ToRecipients = @()
-		CcRecipients = @()
-	}
-	SaveToSentItems = "false"
+    Message = @{
+        Subject = "New team: $($QueueItem.Body.group.displayName)"
+        Body = @{
+            ContentType = "Text"
+            Content = $mailText
+        }
+        ToRecipients = @()
+        CcRecipients = @()
+    }
+    SaveToSentItems = "false"
 }
 
 # support multiple recipients in a space-separated string
@@ -41,7 +41,7 @@ $env:mailToAddresses -split ' ' | Where-Object {$_ -match "@"} | ForEach-Object 
 }
 
 # A UPN can also be used as -UserId
-if($env:fromAddr -match "@"){
+if($env:mailFromAddress -match "@"){
     $userId = $env:mailFromAddress
 } else {
     $userId = $QueueItem.Body.user.userPrincipalName
