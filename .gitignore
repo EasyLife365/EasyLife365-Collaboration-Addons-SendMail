@@ -4,6 +4,8 @@ bin
 obj
 appsettings.json
 local.settings.json
+.dccache
+deploypkg.zip
 
 # Azurite artifacts
 __blobstorage__

@@ -1,13 +1,10 @@
-# create azure resources and grant permissions
+# Deploy the solution to an Azure Subscription
+The deplyoment is automated with Bicep files. The script to start the deployment from localhost can be found under _automation/provisioning-environment.ps1.
+You can also use the _automation/provision.ps1 in a GitHub action after siging in to Azure AD with a service principal.
 
 ```powershell
 # edit parameters
 $resourceGroupName = "el-sendmail1"
-$functionAppName = "el-sendmail1"
-$storageAccountName = "elsendmail001"
-$location = "westeurope"
-$mailFromAddress = "notification@example.com"
-$mailToAddresses = "user1@example.com user2@example.com"
 
 # login to azure and optionally change subscription
 az login
@@ -18,43 +15,6 @@ az group create `
 --name $resourceGroupName `
 --location $location
 
-# create storage account
-az storage account create `
---name $storageAccountName `
---resource-group $resourceGroupName `
---location $location `
---sku Standard_LRS
-
-# get connection string for the storage account
-$connString = (az storage account show-connection-string -g $resourceGroupName -n $storageAccountName | ConvertFrom-Json).connectionString
-
-# create storage queue with connection string
-az storage queue create `
--n queue1 `
---connection-string $connString
-
-# create function app and configure settings
-$funcAppOutput = az functionapp create `
---consumption-plan-location $location `
---name $functionAppName --os-type Windows `
---resource-group $resourceGroupName `
---runtime powershell `
---storage-account $storageAccountName `
---functions-version 3 `
---assign-identity '[system]' | ConvertFrom-Json
-
-az functionapp config appsettings set `
---name $functionAppName `
---resource-group $resourceGroupName `
---settings "mailFromAddress=$mailFromAddress"
-
-az functionapp config appsettings set `
---name $functionAppName `
---resource-group $resourceGroupName `
---settings "mailToAddresses=$mailToAddresses"
-
-# get service principals for permission assignment
-$servicePrincipalId = $funcAppOutput.identity.principalId
 $graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].objectId
 
 # assign permissions to the managed identity
@@ -73,17 +33,6 @@ $graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-J
     # for some reason, the body must only use single quotes
     az rest --method POST --uri $uri --header $header --body $body.Replace('"',"'")
 }
-
-# update deploy package
-$deployPath = Get-ChildItem | `
-Where-Object {$_.Name -notmatch "deploypkg"} | `
-Compress-Archive -DestinationPath deploypkg.zip -Force -PassThru
-
-# deploy the zipped package
-az functionapp deployment source config-zip `
---name $functionAppName `
---resource-group $resourceGroupName `
---src $deployPath.FullName
 ```
 
 # test the function app
