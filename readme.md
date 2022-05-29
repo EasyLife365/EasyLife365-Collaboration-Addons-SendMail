@@ -106,13 +106,11 @@ az functionapp deployment source config-zip `
 
 ## Deploy the solution to an Azure Subscription via Bicep
 
-You can also use Azure Bicep to deploy the solution. You can find the script to start the deployment from localhost under `_automation/provisioning-environment.ps1`. You can use the script `_automation/provision.ps1` in a GitHub action after signing in to Azure AD with a service principal.
+You can also use Azure Bicep to deploy the solution. You can find the script to start the deployment from localhost under `_automation/provisioning-environment.ps1`. You can use the script `_automation/provision-environment.ps1` in a GitHub action after signing in to Azure AD with a service principal. We provide two sample parameter files for the Bicep script under `_automation/config`.
 
-Before you start a new deployment, you need to make a few changes to the files mentioned below. We recommend you [fork](https://github.com/EasyLife365/EasyLife365-Addon-SendMail/generate) the repository and change the values in your fork.
+Before you start a new deployment, you need to make a few changes to the config files mentioned below. We recommend you [fork](https://github.com/EasyLife365/EasyLife365-Addon-SendMail/generate) the repository and change the values in your fork.
 
-- provision-environment.ps1:
-  - Replace 00000000-0000-0000-0000-000000000000 with the id of the subscription where resources shall be deployed
-- resources-dev.json:
+- resources-dev.json and resources-prod.json:
   - Adjust the values of the following settings to match your requirements:
     - applicationName
     - resourceNamesPrefix
@@ -120,7 +118,16 @@ Before you start a new deployment, you need to make a few changes to the files m
     - mailFromAddress
     - mailToAddresses
 
-We provide two sample parameter files for the Bicep script under `_automation/config`.
+After saving the changes, you can start the deployment by running `_automation/provisioning-environment.ps1` either locally or as GitHub action. You can enter the subscription id you want to use as default parameter or pass it on execution like in the following example:
+
+```powershell
+# this example will prompt you to login to Azure and then start the provisioning for the dev stage in the
+# given subscription id. The default stage is dev. 
+./_automation/provisioning-environment.ps1 -subscriptionId 7e683c0d-6c0c-4e7f-b2c1-b8fe837ba82a
+
+# this example provisions the prod stage
+./_automation/provisioning-environment.ps1 -stage prod -subscriptionId 7e683c0d-6c0c-4e7f-b2c1-b8fe837ba82a
+```
 
 ## Test the function app
 
