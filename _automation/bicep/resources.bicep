@@ -2,6 +2,8 @@ param stage string
 param applicationName string
 param resourceNamesPrefix string
 param location string = resourceGroup().location
+param mailFromAddress string
+param mailToAddresses string
 
 module logAnalyticsModule 'loganalyticsWorkspace.bicep' = {
   name: 'logAnalyticsModule'
@@ -24,7 +26,10 @@ module functionAppModule 'functionApp.bicep' = {
     applicationName: applicationName
     location: location
     workspaceId: logAnalyticsModule.outputs.logAnalyticsWorkspaceID
+    mailFromAddress: mailFromAddress
+    mailToAddresses: mailToAddresses
   }
 }
 
 output functionName string = functionName
+output functionPrincipalId string = functionAppModule.outputs.functionPrincipalId

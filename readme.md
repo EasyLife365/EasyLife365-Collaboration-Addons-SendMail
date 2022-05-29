@@ -1,20 +1,78 @@
-# Deploy the solution to an Azure Subscription
-The deplyoment is automated with Bicep files. The script to start the deployment from localhost can be found under _automation/provisioning-environment.ps1.
-You can also use the _automation/provision.ps1 in a GitHub action after siging in to Azure AD with a service principal.
+# Use Azure Functions to run custom PowerShell code with EasyLife
+
+This is a sample Azure Function that shows how EasyLife's webhook feature can be used to extend the product with custom code. In this example, we use the Microsoft Graph PowerShell module to send an email notification to an address that is specified in the Function App's configuration.
+
+The app uses two functions:
+
+- mailrequest: This function uses a http trigger. The function simply writes any request that it receives to a storage queue.
+- mailqueue: This function uses a queue trigger. When the mailrequest function writes a new item to the storage queue, this function is started and the content of the request is available as parameter.
+
+The app can be deployed using PowerShell with Azure CLI or with Bicep. In both cases you need to install the Azure CLI, which you can find here: [https://aka.ms/installazurecliwindows](https://aka.ms/installazurecliwindows).
+
+## Deploy the solution to an Azure Subscription via PowerShell
+
+You can use the following PowerShell and Azure CLI code to deploy the solution to an Azure subscription. Update the values of variables in the first few lines to match your requirements, then run the whole thing in a PowerShell session.
 
 ```powershell
 # edit parameters
+# specify the name and location of the resources that will be created 
 $resourceGroupName = "el-sendmail1"
+$functionAppName = "el-sendmail1"
+$storageAccountName = "elsendmail001"
+$location = "westeurope"
+# specify one from address for the notification emails, if not defined (""), the address of the requestor will be used
+$mailFromAddress = "notification@example.com"
+# specify one or more recipient addresses in a space-separated list
+$mailToAddresses = "user1@example.com user2@example.com"
 
 # login to azure and optionally change subscription
 az login
 # az account set --subscription 00000000-0000-0000-0000-000000000000
 
+# there should be no need to change anything below this
+
 # create resource group
 az group create `
---name $resourceGroupName `
---location $location
+    --name $resourceGroupName `
+    --location $location
 
+# create storage account
+az storage account create `
+    --name $storageAccountName `
+    --resource-group $resourceGroupName `
+    --location $location `
+    --sku Standard_LRS
+
+# get connection string for the storage account
+$connString = (az storage account show-connection-string -g $resourceGroupName -n $storageAccountName | ConvertFrom-Json).connectionString
+
+# create storage queue with connection string
+az storage queue create `
+    --name queue1 `
+    --connection-string $connString
+
+# create function app and configure settings
+$funcAppOutput = az functionapp create `
+    --consumption-plan-location $location `
+    --name $functionAppName --os-type Windows `
+    --resource-group $resourceGroupName `
+    --runtime powershell `
+    --storage-account $storageAccountName `
+    --functions-version 3 `
+    --assign-identity '[system]' | ConvertFrom-Json
+
+az functionapp config appsettings set `
+    --name $functionAppName `
+    --resource-group $resourceGroupName `
+    --settings "mailFromAddress=$mailFromAddress"
+
+az functionapp config appsettings set `
+    --name $functionAppName `
+    --resource-group $resourceGroupName `
+    --settings "mailToAddresses=$mailToAddresses"
+
+# get service principals for permission assignment
+$servicePrincipalId = $funcAppOutput.identity.principalId
 $graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].objectId
 
 # assign permissions to the managed identity
@@ -33,15 +91,48 @@ $graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-J
     # for some reason, the body must only use single quotes
     az rest --method POST --uri $uri --header $header --body $body.Replace('"',"'")
 }
+
+# update deploy package
+$deployPath = Get-ChildItem | `
+    Where-Object {$_.Name -notmatch "deploypkg" -and $_.Name -notmatch "_automation" } | `
+    Compress-Archive -DestinationPath deploypkg.zip -Force -PassThru
+
+# deploy the zipped package
+az functionapp deployment source config-zip `
+    --name $functionAppName `
+    --resource-group $resourceGroupName `
+    --src $deployPath.FullName
 ```
 
-# test the function app
+## Deploy the solution to an Azure Subscription via Bicep
 
-before setting the webhook url in easylife, make sure to ping the function app at least once. The first execution is slow as requirements defined in `requirements.psd1` are installed. Get URI from function app `HTTPTrigger1` and enter a valid group `id`: 
+You can also use Azure Bicep to deploy the solution. You can find the script to start the deployment from localhost under `_automation/provisioning-environment.ps1`. You can use the script `_automation/provision.ps1` in a GitHub action after signing in to Azure AD with a service principal.
+
+Before you start a new deployment, you need to make a few changes to the files mentioned below. We recommend you [fork](https://github.com/EasyLife365/EasyLife365-Addon-SendMail/generate) the repository and change the values in your fork.
+
+- provision-environment.ps1:
+  - Replace 00000000-0000-0000-0000-000000000000 with the id of the subscription where resources shall be deployed
+- resources-dev.json:
+  - Adjust the values of the following settings to match your requirements:
+    - applicationName
+    - resourceNamesPrefix
+    - location
+    - mailFromAddress
+    - mailToAddresses
+
+We provide two sample parameter files for the Bicep script under `_automation/config`.
+
+## Test the function app
+
+Once you have deployed the function to Azure, you are ready for testing. You need to get the function URL from the Azure Portal. To find the function URL, open the function app in the Azure Portal. Then click *Functions* in the left-hand navigation and click the *mailrequest* function to open its properties. In the *Overview* tab, click *Get Function URL* and copy the URL. 
+It will look like this example: `https://<appName>.azurewebsites.net/api/HttpTrigger1?code=<code>`
+
+This is the URL that you want use as webhook in the EasyLife configuration, but before setting the webhook url in EasyLife, make sure to run the function app at least once. The first execution is slow as requirements defined in `requirements.psd1` are installed.
+
+You can use the following PowerShell snippet to run the function app. Make sure to update the `$uri` variable with your function URL and insert the object id of a group in your tenant as `group.id`:
 
 ```powershell
-$uri = 'https://<functionAppUrl>.azurewebsites.net/api/HttpTrigger1?code=<functionAuthCode>=='
-
+$uri = 'https://<functionAppName>.azurewebsites.net/api/mailrequest?code=<code>'
 $item = @{
     eventType = "groupcreated"
     user = @{
@@ -49,9 +140,10 @@ $item = @{
     }
     group = @{
         displayName = "Test Team Name"
-        id = "bed129c8-2ecb-4cb7-b812-c754270ec7d8" # should exist in tenant for valid test
+        id = "00000000-0000-0000-0000-000000000000" # should exist in tenant for valid test
     }
-} 
-
-Invoke-RestMethod -Uri $uri -Body ($item | ConvertTo-Json -Compress)
+}
+Invoke-RestMethod -Uri $uri -Body ($item | ConvertTo-Json -Compress) -Method Post
 ```
+
+For more information please see: [docs.easylife365.cloud](https://docs.easylife365.cloud)

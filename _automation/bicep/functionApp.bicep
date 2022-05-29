@@ -4,6 +4,8 @@ param resourceNamesPrefix string
 param applicationName string
 param workspaceId string
 param functionName string
+param mailFromAddress string
+param mailToAddresses string
 
 var storageAccountName = '${resourceNamesPrefix}${applicationName}${stage}st'
 var hostingPlanName = '${resourceNamesPrefix}-${applicationName}-${stage}-ap'
@@ -84,6 +86,14 @@ resource functionApp 'Microsoft.Web/sites@2020-06-01' = {
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
           value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storageAccount.id, storageAccount.apiVersion).keys[0].value}'
+        }
+        {
+          name: 'mailFromAddress'
+          value: mailFromAddress
+        }
+        {
+          name: 'mailToAddresses'
+          value: mailToAddresses
         }
       ]
     }
