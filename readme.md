@@ -43,14 +43,6 @@ az storage account create `
     --location $location `
     --sku Standard_LRS
 
-# get connection string for the storage account
-$connString = (az storage account show-connection-string -g $resourceGroupName -n $storageAccountName | ConvertFrom-Json).connectionString
-
-# create storage queue with connection string
-az storage queue create `
-    --name queue1 `
-    --connection-string $connString
-
 # create function app and configure settings
 $funcAppOutput = az functionapp create `
     --consumption-plan-location $location `
@@ -106,7 +98,7 @@ az functionapp deployment source config-zip `
 
 ## Deploy the solution to an Azure Subscription via Bicep
 
-You can also use Azure Bicep to deploy the solution. You can find the script to start the deployment from localhost under `_automation/provisioning-environment.ps1`. You can use the script `_automation/provision-environment.ps1` in a GitHub action after signing in to Azure AD with a service principal. We provide two sample parameter files for the Bicep script under `_automation/config`.
+You can also use Azure Bicep to deploy the solution. You can find the script to start the deployment from localhost under `_automation/provisioning-environment.ps1`. You can use the script `_automation/provision.ps1` in a GitHub action after signing in to Azure AD with a service principal. We provide two sample parameter files for the Bicep script under `_automation/config`.
 
 Before you start a new deployment, you need to make a few changes to the config files mentioned below. We recommend you [fork](https://github.com/EasyLife365/EasyLife365-Addon-SendMail/generate) the repository and change the values in your fork.
 
@@ -131,7 +123,7 @@ After saving the changes, you can start the deployment by running `_automation/p
 
 ## Test the function app
 
-Once you have deployed the function to Azure, you are ready for testing. You need to get the function URL from the Azure Portal. To find the function URL, open the function app in the Azure Portal. Then click *Functions* in the left-hand navigation and click the *mailrequest* function to open its properties. In the *Overview* tab, click *Get Function URL* and copy the URL. 
+Once you have deployed the function to Azure, you are ready for testing. You need to get the function URL from the Azure Portal. To find the function URL, open the function app in the Azure Portal. Then click *Functions* in the left-hand navigation and click the *mailrequest* function to open its properties. In the *Overview* tab, click *Get Function URL* and copy the URL.
 It will look like this example: `https://<appName>.azurewebsites.net/api/HttpTrigger1?code=<code>`
 
 This is the URL that you want use as webhook in the EasyLife configuration, but before setting the webhook url in EasyLife, make sure to run the function app at least once. The first execution is slow as requirements defined in `requirements.psd1` are installed.
