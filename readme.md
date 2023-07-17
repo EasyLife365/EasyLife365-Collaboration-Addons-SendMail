@@ -50,7 +50,7 @@ $funcAppOutput = az functionapp create `
     --resource-group $resourceGroupName `
     --runtime powershell `
     --storage-account $storageAccountName `
-    --functions-version 3 `
+    --functions-version 4 `
     --assign-identity '[system]' | ConvertFrom-Json
 
 az functionapp config appsettings set `
@@ -65,7 +65,7 @@ az functionapp config appsettings set `
 
 # get service principals for permission assignment
 $servicePrincipalId = $funcAppOutput.identity.principalId
-$graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].objectId
+$graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].id
 
 # assign permissions to the managed identity
 @(

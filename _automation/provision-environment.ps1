@@ -25,7 +25,7 @@ $output = ./_automation/provision.ps1 $stage
 # you need to be signed in with an account with the global admin role.
 
 $servicePrincipalId = $output[-1]
-$graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].objectId
+$graphObjectId = (az ad sp list --display-name 'Microsoft Graph' | ConvertFrom-Json)[0].id
 
 # assign permissions to the managed identity
 @(
